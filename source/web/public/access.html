@@ -88,6 +88,7 @@
         <button id="openBtn" class="primary">Abrir</button>
         <button id="logoutBtn" class="muted" style="margin-top: 12px;">Salir</button>
         <div id="gateMessage" class="success" style="display:none;"></div>
+        <div id="gateStatus" class="success" style="display:none;"></div>
         <div id="gateError" class="error" style="display:none;"></div>
       </div>
     </div>
@@ -97,6 +98,7 @@
       let nodeBaseUrl = null;
       let gateActive = false;
       let gateTimer = null;
+      let statusTimer = null;
 
       const loginForm = document.getElementById('login-form');
       const gatePanel = document.getElementById('gate-panel');
@@ -105,6 +107,7 @@
       const logoutBtn = document.getElementById('logoutBtn');
       const loginError = document.getElementById('loginError');
       const gateMessage = document.getElementById('gateMessage');
+      const gateStatus = document.getElementById('gateStatus');
       const gateError = document.getElementById('gateError');
 
       function nodeBase() {
@@ -121,6 +124,11 @@
       function setGateMessage(message) {
         gateMessage.textContent = message;
         gateMessage.style.display = message ? 'block' : 'none';
+      }
+
+      function setGateStatus(message) {
+        gateStatus.textContent = message;
+        gateStatus.style.display = message ? 'block' : 'none';
       }
 
       function setGateError(message) {
@@ -168,6 +176,7 @@
           token = tokenInput;
           loginForm.style.display = 'none';
           gatePanel.style.display = 'block';
+          startStatusPolling();
         } catch (error) {
           setLoginError('Error al conectar con el NodeMCU.');
         } finally {
@@ -216,10 +225,41 @@
         nodeBaseUrl = null;
         setGateActive(false);
         setGateMessage('');
+        setGateStatus('');
         setGateError('');
+        stopStatusPolling();
         gatePanel.style.display = 'none';
         loginForm.style.display = 'block';
       });
+
+      function startStatusPolling() {
+        stopStatusPolling();
+        statusTimer = setInterval(async () => {
+          if (!nodeBaseUrl) return;
+          try {
+            const response = await fetch(nodeBaseUrl + '/status');
+            if (!response.ok) {
+              setGateStatus('Sin conexion al NodeMCU');
+              return;
+            }
+            const payload = await response.json();
+            if (payload && typeof payload.busy !== 'undefined') {
+              setGateStatus(payload.busy ? 'Porton ocupado' : 'Porton libre');
+            } else {
+              setGateStatus('Estado recibido');
+            }
+          } catch (error) {
+            setGateStatus('Sin conexion al NodeMCU');
+          }
+        }, 2000);
+      }
+
+      function stopStatusPolling() {
+        if (statusTimer) {
+          clearInterval(statusTimer);
+          statusTimer = null;
+        }
+      }
     </script>
   </body>
 </html>
