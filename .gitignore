@@ -1,0 +1,7 @@
+context
+.claude
+.cursor
+node_modules
+dist
+.env
+.env.*
