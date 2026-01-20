@@ -74,23 +74,17 @@
       <h1>Acceso Porton</h1>
 
       <div id="login-form">
-        <label for="apiBase">API Base URL</label>
-        <input id="apiBase" type="text" placeholder="https://tu-api.railway.app" />
+        <label for="nodeBase">NodeMCU URL</label>
+        <input id="nodeBase" type="text" placeholder="http://192.168.1.50" />
 
-        <label for="email">Email</label>
-        <input id="email" type="email" placeholder="usuario@correo.com" />
-
-        <label for="password">Contrasena</label>
-        <input id="password" type="password" placeholder="********" />
+        <label for="token">Token</label>
+        <input id="token" type="password" placeholder="token de acceso" />
 
         <button id="loginBtn" class="primary">Ingresar</button>
         <div id="loginError" class="error" style="display:none;"></div>
       </div>
 
       <div id="gate-panel" style="display:none;">
-        <label for="deviceId">Device ID</label>
-        <input id="deviceId" type="text" value="porton-001" />
-
         <button id="openBtn" class="primary">Abrir</button>
         <button id="logoutBtn" class="muted" style="margin-top: 12px;">Salir</button>
         <div id="gateMessage" class="success" style="display:none;"></div>
@@ -100,6 +94,7 @@
 
     <script>
       let token = null;
+      let nodeBaseUrl = null;
       let gateActive = false;
       let gateTimer = null;
 
@@ -112,10 +107,10 @@
       const gateMessage = document.getElementById('gateMessage');
       const gateError = document.getElementById('gateError');
 
-      function apiBase() {
-        const value = document.getElementById('apiBase').value.trim();
+      function nodeBase() {
+        const value = document.getElementById('nodeBase').value.trim();
         if (!value) return '';
-        return value.endsWith('/api') ? value : value + '/api';
+        return value.replace(/\/$/, '');
       }
 
       function setLoginError(message) {
@@ -150,43 +145,31 @@
 
       loginBtn.addEventListener('click', async () => {
         setLoginError('');
-        const base = apiBase();
+        const base = nodeBase();
         if (!base) {
-          setLoginError('Ingresa la URL de la API.');
+          setLoginError('Ingresa la URL del NodeMCU.');
           return;
         }
 
-        const email = document.getElementById('email').value.trim();
-        const password = document.getElementById('password').value.trim();
-        if (!email || !password) {
-          setLoginError('Completa email y contrasena.');
+        const tokenInput = document.getElementById('token').value.trim();
+        if (!tokenInput) {
+          setLoginError('Ingresa el token.');
           return;
         }
 
         loginBtn.disabled = true;
         try {
-          const response = await fetch(base + '/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-          });
-
+          const response = await fetch(base + '/status');
           if (!response.ok) {
-            setLoginError('Acceso denegado');
+            setLoginError('No se pudo conectar al NodeMCU.');
             return;
           }
-
-          const payload = await response.json();
-          token = payload.access_token;
-          if (!token) {
-            setLoginError('Acceso denegado');
-            return;
-          }
-
+          nodeBaseUrl = base;
+          token = tokenInput;
           loginForm.style.display = 'none';
           gatePanel.style.display = 'block';
         } catch (error) {
-          setLoginError('Error al conectar con la API.');
+          setLoginError('Error al conectar con el NodeMCU.');
         } finally {
           loginBtn.disabled = false;
         }
@@ -197,23 +180,15 @@
         setGateError('');
         setGateMessage('');
 
-        const base = apiBase();
-        const deviceId = document.getElementById('deviceId').value.trim();
-        if (!deviceId) {
-          setGateError('Debes indicar el deviceId.');
+        const base = nodeBaseUrl;
+        if (!base) {
+          setGateError('No hay conexion con el NodeMCU.');
           return;
         }
 
         openBtn.disabled = true;
         try {
-          const response = await fetch(base + '/gates/open', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: 'Bearer ' + token,
-            },
-            body: JSON.stringify({ deviceId }),
-          });
+          const response = await fetch(base + '/open?token=' + encodeURIComponent(token));
 
           if (!response.ok) {
             setGateError('Acceso denegado');
@@ -238,6 +213,7 @@
 
       logoutBtn.addEventListener('click', () => {
         token = null;
+        nodeBaseUrl = null;
         setGateActive(false);
         setGateMessage('');
         setGateError('');
