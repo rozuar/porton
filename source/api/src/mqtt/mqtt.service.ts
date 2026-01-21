@@ -3,6 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import * as mqtt from 'mqtt';
 import { DevicesService } from '../devices/devices.service';
 import { DeviceStatus } from '../devices/device.entity';
+import { LogsService } from '../logs/logs.service';
+import { LogResult } from '../logs/log.entity';
 
 @Injectable()
 export class MqttService implements OnModuleInit, OnModuleDestroy {
@@ -12,6 +14,7 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private configService: ConfigService,
     private devicesService: DevicesService,
+    private logsService: LogsService,
   ) {}
 
   onModuleInit() {
@@ -38,23 +41,22 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
       console.log('MQTT connected');
       this.isConnected = true;
       this.client?.subscribe('portones/+/status');
+      this.client?.subscribe('portones/+/events');
     });
 
     this.client.on('message', async (topic, message) => {
       const parts = topic.split('/');
-      if (parts.length === 3 && parts[0] === 'portones' && parts[2] === 'status') {
-        const deviceId = parts[1];
-        try {
-          const payload = JSON.parse(message.toString());
-          if (payload.status) {
-            await this.devicesService.updateStatus(
-              deviceId,
-              payload.status === 'online' ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE,
-            );
-          }
-        } catch (error) {
-          console.error('Error processing MQTT message:', error);
-        }
+      if (parts.length !== 3 || parts[0] !== 'portones') {
+        return;
+      }
+      const deviceId = parts[1];
+      const channel = parts[2];
+      if (channel === 'status') {
+        await this.handleStatusMessage(deviceId, message);
+        return;
+      }
+      if (channel === 'events') {
+        await this.handleEventMessage(deviceId, message);
       }
     });
 
@@ -97,5 +99,41 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
         }
       });
     });
+  }
+
+  private async handleStatusMessage(deviceId: string, message: Buffer) {
+    try {
+      const payload = JSON.parse(message.toString());
+      if (payload.status) {
+        await this.devicesService.updateStatus(
+          deviceId,
+          payload.status === 'online' ? DeviceStatus.ONLINE : DeviceStatus.OFFLINE,
+        );
+      }
+    } catch (error) {
+      console.error('Error processing MQTT status:', error);
+    }
+  }
+
+  private async handleEventMessage(deviceId: string, message: Buffer) {
+    try {
+      const payload = JSON.parse(message.toString());
+      const eventName = typeof payload.event === 'string' ? payload.event : '';
+      if (!eventName) {
+        return;
+      }
+      const userId = typeof payload.userId === 'string' ? payload.userId : null;
+      const requestId = typeof payload.requestId === 'string' ? payload.requestId : null;
+      const millis = typeof payload.millis === 'number' ? payload.millis : null;
+      const details = JSON.stringify({
+        event: eventName,
+        requestId,
+        millis,
+      });
+      const result = eventName === 'unsupported_action' ? LogResult.ERROR : LogResult.SUCCESS;
+      await this.logsService.create(userId, deviceId, eventName.toUpperCase(), result, details);
+    } catch (error) {
+      console.error('Error processing MQTT event:', error);
+    }
   }
 }

@@ -5,3 +5,11 @@ node_modules
 dist
 .env
 .env.*
+source/android/.gradle/
+source/android/.idea/
+source/android/app/build/
+source/android/build/
+source/android/gradle/
+source/android/gradlew
+source/android/gradlew.bat
+source/android/local.properties
