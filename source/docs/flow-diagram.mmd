@@ -1,0 +1,15 @@
+sequenceDiagram
+  participant App as Web/Android App
+  participant API as API (NestJS)
+  participant MQTT as Mosquitto (Railway)
+  participant MCU as NodeMCU
+  participant DB as PostgreSQL
+
+  App->>API: POST /api/gates/open {deviceId}
+  API->>DB: validate permissions + log attempt
+  API->>MQTT: publish portones/{deviceId}/command (OPEN)
+  MQTT-->>MCU: deliver command
+  MCU->>MCU: runOpenSequence (relay)
+  MCU-->>MQTT: publish portones/{deviceId}/events (open_* events)
+  MQTT-->>API: events subscription
+  API->>DB: store logs from events

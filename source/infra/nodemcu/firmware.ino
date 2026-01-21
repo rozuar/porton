@@ -22,28 +22,6 @@ PubSubClient mqttClient(espClient);
 
 String commandTopic;
 String statusTopic;
-String eventsTopic;
-
-String extractJsonString(const String& json, const char* key) {
-  const String token = String("\"") + key + "\"";
-  const int keyIndex = json.indexOf(token);
-  if (keyIndex < 0) {
-    return "";
-  }
-  int colonIndex = json.indexOf(':', keyIndex + token.length());
-  if (colonIndex < 0) {
-    return "";
-  }
-  int start = colonIndex + 1;
-  while (start < (int)json.length() && (json[start] == ' ' || json[start] == '\"')) {
-    start++;
-  }
-  int end = start;
-  while (end < (int)json.length() && json[end] != '\"' && json[end] != ',' && json[end] != '}') {
-    end++;
-  }
-  return json.substring(start, end);
-}
 
 void logLine(const char* message) {
   Serial.print("[");
@@ -83,40 +61,12 @@ void publishStatus(const char* status) {
   Serial.println(status);
 }
 
-void publishEvent(const char* eventName, const String& requestId, const String& userId) {
-  if (eventsTopic.length() == 0) {
-    return;
-  }
-  String payload = String("{\"event\":\"") + eventName + "\"";
-  if (requestId.length() > 0) {
-    payload += String(",\"requestId\":\"") + requestId + "\"";
-  }
-  if (userId.length() > 0) {
-    payload += String(",\"userId\":\"") + userId + "\"";
-  }
-  payload += String(",\"millis\":") + String(millis()) + "}";
-  logValue("MQTT event payload: ", payload.c_str());
-  mqttClient.publish(eventsTopic.c_str(), payload.c_str(), false);
-}
-
 void pulseRelay() {
   logLine("RELAY: pulse start");
   digitalWrite(RELAY_PIN, RELAY_ACTIVE_HIGH ? HIGH : LOW);
   delay(RELAY_ACTIVE_MS);
   digitalWrite(RELAY_PIN, RELAY_ACTIVE_HIGH ? LOW : HIGH);
   logLine("RELAY: pulse end");
-}
-
-void runOpenSequence(const String& requestId, const String& userId) {
-  logLine("PORTON: abriendo");
-  publishEvent("open_started", requestId, userId);
-  pulseRelay();
-  publishEvent("relay_pulse_done", requestId, userId);
-  logLine("PORTON: verificar");
-  publishEvent("open_verify", requestId, userId);
-  delay(400);
-  logLine("PORTON: cerrado");
-  publishEvent("open_closed", requestId, userId);
 }
 
 void onMessage(char* topic, byte* payload, unsigned int length) {
@@ -134,24 +84,12 @@ void onMessage(char* topic, byte* payload, unsigned int length) {
 
   Serial.print("MQTT: received ");
   Serial.println(body);
-  const String action = extractJsonString(body, "action");
-  const String requestId = extractJsonString(body, "requestId");
-  const String userId = extractJsonString(body, "userId");
-  if (requestId.length() > 0) {
-    logValue("MQTT requestId: ", requestId.c_str());
-  }
-  if (userId.length() > 0) {
-    logValue("MQTT userId: ", userId.c_str());
-  }
-  if (action == "OPEN") {
+  if (body.indexOf("\"action\"") >= 0 && body.indexOf("OPEN") >= 0) {
     logLine("MQTT: OPEN received");
-    publishEvent("open_received", requestId, userId);
-    runOpenSequence(requestId, userId);
-    publishEvent("open_executed", requestId, userId);
+    pulseRelay();
     logLine("MQTT: OPEN executed");
   } else {
     Serial.println("MQTT: unsupported action");
-    publishEvent("unsupported_action", requestId, userId);
   }
 }
 
@@ -198,10 +136,8 @@ void setup() {
 
   commandTopic = String("portones/") + DEVICE_ID + "/command";
   statusTopic = String("portones/") + DEVICE_ID + "/status";
-  eventsTopic = String("portones/") + DEVICE_ID + "/events";
   logValue("Command topic: ", commandTopic.c_str());
   logValue("Status topic: ", statusTopic.c_str());
-  logValue("Events topic: ", eventsTopic.c_str());
 
   connectWifi();
   connectMqtt();
