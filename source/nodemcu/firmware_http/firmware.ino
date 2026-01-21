@@ -27,15 +27,18 @@ void pulseRelay() {
 void handleOpen() {
   const String token = server.arg("token");
   if (token.length() == 0 || token != ACCESS_TOKEN) {
+    Serial.println("OPEN: forbidden");
     server.send(403, "application/json", "{\"ok\":false,\"error\":\"forbidden\"}");
     return;
   }
 
   if (gateBusy) {
+    Serial.println("OPEN: busy");
     server.send(409, "application/json", "{\"ok\":false,\"error\":\"busy\"}");
     return;
   }
 
+  Serial.println("OPEN: accepted");
   gateBusy = true;
   gateStartedAt = millis();
   pulseRelay();
@@ -43,11 +46,15 @@ void handleOpen() {
 }
 
 void handleStatus() {
+  Serial.println(gateBusy ? "STATUS: busy" : "STATUS: free");
   String payload = String("{\"ok\":true,\"busy\":") + (gateBusy ? "true" : "false") + "}";
   server.send(200, "application/json", payload);
 }
 
 void setup() {
+  Serial.begin(115200);
+  Serial.println("Booting...");
+
   pinMode(RELAY_PIN, OUTPUT);
   digitalWrite(RELAY_PIN, RELAY_ACTIVE_HIGH ? LOW : HIGH);
 
@@ -56,10 +63,13 @@ void setup() {
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
   }
+  Serial.print("WiFi connected, IP: ");
+  Serial.println(WiFi.localIP());
 
   server.on("/open", handleOpen);
   server.on("/status", handleStatus);
   server.begin();
+  Serial.println("HTTP server ready");
 }
 
 void loop() {
@@ -67,5 +77,6 @@ void loop() {
 
   if (gateBusy && (millis() - gateStartedAt) >= GATE_LOCK_MS) {
     gateBusy = false;
+    Serial.println("LOCK: timeout, ready");
   }
 }

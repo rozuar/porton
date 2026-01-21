@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -78,6 +79,7 @@ fun PortonApp(viewModel: MainViewModel = viewModel()) {
   }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
   email: String,
@@ -131,6 +133,7 @@ fun LoginScreen(
   }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
   deviceId: String,
@@ -221,8 +224,10 @@ class MainViewModel : ViewModel() {
   fun login() {
     if (uiState.isLoading) return
     viewModelScope.launch {
+      val email = uiState.email.trim()
+      val password = uiState.password.trim()
       uiState = uiState.copy(isLoading = true, error = null)
-      val result = apiClient.login(uiState.email, uiState.password)
+      val result = apiClient.login(email, password)
       uiState = if (result.isSuccess) {
         uiState.copy(token = result.getOrNull(), isLoading = false, password = "")
       } else {
@@ -280,10 +285,13 @@ class ApiClient {
         .post(body.toRequestBody(jsonType))
         .build()
       client.newCall(request).execute().use { response ->
+        val responseBody = response.body?.string().orEmpty()
         if (!response.isSuccessful) {
-          return@withContext Result.failure(Exception("Login fallido"))
+          return@withContext Result.failure(
+            Exception("Login fallido (${response.code}) ${responseBody.ifBlank { "sin detalle" }}"),
+          )
         }
-        val payload = JSONObject(response.body?.string() ?: "{}")
+        val payload = JSONObject(if (responseBody.isBlank()) "{}" else responseBody)
         val token = payload.optString("access_token", null)
         if (token.isNullOrBlank()) {
           return@withContext Result.failure(Exception("Token no recibido"))
@@ -304,8 +312,11 @@ class ApiClient {
         .addHeader("Authorization", "Bearer $token")
         .build()
       client.newCall(request).execute().use { response ->
+        val responseBody = response.body?.string().orEmpty()
         if (!response.isSuccessful) {
-          return@withContext Result.failure(Exception("No se pudo abrir el porton"))
+          return@withContext Result.failure(
+            Exception("No se pudo abrir el porton (${response.code}) ${responseBody.ifBlank { "sin detalle" }}"),
+          )
         }
         Result.success(Unit)
       }
