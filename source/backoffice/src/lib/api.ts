@@ -212,7 +212,7 @@ export interface CreatePermissionDto {
 }
 
 export interface UpdatePermissionDto {
-  fromTime?: string;
-  toTime?: string;
+  fromTime?: string | null;
+  toTime?: string | null;
   isActive?: boolean;
 }

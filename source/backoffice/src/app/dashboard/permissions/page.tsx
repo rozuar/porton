@@ -93,12 +93,14 @@ export default function PermissionsPage() {
     if (!token) return;
     try {
       const updateData: UpdatePermissionDto = {};
-      if (editFormData.fromTime) updateData.fromTime = editFormData.fromTime;
-      if (editFormData.toTime) updateData.toTime = editFormData.toTime;
       // Si ambos están vacíos, establecer null para acceso 24 horas
       if (!editFormData.fromTime && !editFormData.toTime) {
         updateData.fromTime = null;
         updateData.toTime = null;
+      } else {
+        // Si hay valores, asignarlos (pueden ser string vacío que se convertirá a null en el backend)
+        if (editFormData.fromTime) updateData.fromTime = editFormData.fromTime;
+        if (editFormData.toTime) updateData.toTime = editFormData.toTime;
       }
       await permissionsApi.update(token, id, updateData);
       setEditingPermission(null);
