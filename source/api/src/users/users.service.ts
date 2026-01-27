@@ -1,9 +1,10 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from './user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -50,5 +51,48 @@ export class UsersService {
 
   async validatePassword(user: User, password: string): Promise<boolean> {
     return bcrypt.compare(password, user.passwordHash);
+  }
+
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+    const user = await this.findOne(id);
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    // Si se actualiza el email, verificar que no exista otro usuario con ese email
+    if (updateUserDto.email && updateUserDto.email !== user.email) {
+      const existing = await this.usersRepository.findOne({
+        where: { email: updateUserDto.email },
+      });
+      if (existing) {
+        throw new ConflictException({
+          message: 'Este email ya está registrado',
+          error: 'Email already exists',
+          statusCode: 409,
+        });
+      }
+    }
+
+    // Preparar datos para actualizar
+    const updateData: any = { ...updateUserDto };
+
+    // Si se actualiza la contraseña, hashearla y convertir a passwordHash
+    if (updateUserDto.password) {
+      updateData.passwordHash = await bcrypt.hash(updateUserDto.password, 10);
+      delete updateData.password;
+    }
+
+    await this.usersRepository.update(id, updateData);
+    return this.findOne(id);
+  }
+
+  async toggleActive(id: string): Promise<User> {
+    const user = await this.findOne(id);
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    await this.usersRepository.update(id, { isActive: !user.isActive });
+    return this.findOne(id);
   }
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/auth';
-import { permissionsApi, usersApi, devicesApi, Permission, User, Device, CreatePermissionDto } from '@/lib/api';
+import { permissionsApi, usersApi, devicesApi, Permission, User, Device, CreatePermissionDto, UpdatePermissionDto } from '@/lib/api';
 
 export default function PermissionsPage() {
   const { token } = useAuthStore();
@@ -11,9 +11,14 @@ export default function PermissionsPage() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingPermission, setEditingPermission] = useState<Permission | null>(null);
   const [formData, setFormData] = useState<CreatePermissionDto>({
     userId: '',
     deviceId: '',
+    fromTime: '',
+    toTime: '',
+  });
+  const [editFormData, setEditFormData] = useState<UpdatePermissionDto>({
     fromTime: '',
     toTime: '',
   });
@@ -68,6 +73,40 @@ export default function PermissionsPage() {
       fetchData();
     } catch (error) {
       alert('Error al eliminar permiso');
+    }
+  };
+
+  const handleEdit = (permission: Permission) => {
+    setEditingPermission(permission);
+    setEditFormData({
+      fromTime: permission.fromTime || '',
+      toTime: permission.toTime || '',
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingPermission(null);
+    setEditFormData({ fromTime: '', toTime: '' });
+  };
+
+  const handleUpdate = async (id: string) => {
+    if (!token) return;
+    try {
+      const updateData: UpdatePermissionDto = {};
+      if (editFormData.fromTime) updateData.fromTime = editFormData.fromTime;
+      if (editFormData.toTime) updateData.toTime = editFormData.toTime;
+      // Si ambos están vacíos, establecer null para acceso 24 horas
+      if (!editFormData.fromTime && !editFormData.toTime) {
+        updateData.fromTime = null;
+        updateData.toTime = null;
+      }
+      await permissionsApi.update(token, id, updateData);
+      setEditingPermission(null);
+      setEditFormData({ fromTime: '', toTime: '' });
+      fetchData();
+    } catch (error) {
+      alert('Error al actualizar permiso');
+      console.error('Error updating permission:', error);
     }
   };
 
@@ -163,17 +202,61 @@ export default function PermissionsPage() {
                 <td className="px-6 py-4 text-gray-800">{perm.user?.email || perm.userId}</td>
                 <td className="px-6 py-4 text-gray-800">{perm.device?.name || perm.deviceId}</td>
                 <td className="px-6 py-4 text-gray-600">
-                  {perm.fromTime && perm.toTime
-                    ? `${perm.fromTime} - ${perm.toTime}`
-                    : '24 horas'}
+                  {editingPermission?.id === perm.id ? (
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="time"
+                        value={editFormData.fromTime || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, fromTime: e.target.value })}
+                        className="px-2 py-1 border border-gray-300 rounded text-sm text-gray-800"
+                      />
+                      <span>-</span>
+                      <input
+                        type="time"
+                        value={editFormData.toTime || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, toTime: e.target.value })}
+                        className="px-2 py-1 border border-gray-300 rounded text-sm text-gray-800"
+                      />
+                      <button
+                        onClick={() => handleUpdate(perm.id)}
+                        className="text-green-600 hover:text-green-800 text-sm font-medium ml-2"
+                      >
+                        Guardar
+                      </button>
+                      <button
+                        onClick={handleCancelEdit}
+                        className="text-gray-600 hover:text-gray-800 text-sm font-medium"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : (
+                    <span>
+                      {perm.fromTime && perm.toTime
+                        ? `${perm.fromTime} - ${perm.toTime}`
+                        : '24 horas'}
+                    </span>
+                  )}
                 </td>
                 <td className="px-6 py-4">
-                  <button
-                    onClick={() => handleDelete(perm.id)}
-                    className="text-red-600 hover:text-red-800"
-                  >
-                    Eliminar
-                  </button>
+                  <div className="flex gap-2">
+                    {editingPermission?.id !== perm.id && (
+                      <>
+                        <button
+                          onClick={() => handleEdit(perm)}
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleDelete(perm.id)}
+                          className="text-red-600 hover:text-red-800 text-sm font-medium"
+                        >
+                          Eliminar
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

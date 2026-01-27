@@ -103,6 +103,10 @@ export const usersApi = {
   getAll: (token: string) => api<User[]>('/users', { token }),
   create: (token: string, data: CreateUserDto) =>
     api<User>('/users', { method: 'POST', body: data, token }),
+  update: (token: string, id: string, data: UpdateUserDto) =>
+    api<User>(`/users/${id}`, { method: 'PUT', body: data, token }),
+  toggleActive: (token: string, id: string) =>
+    api<User>(`/users/${id}/toggle-active`, { method: 'PATCH', token }),
 };
 
 // Devices
@@ -117,6 +121,8 @@ export const permissionsApi = {
   getAll: (token: string) => api<Permission[]>('/permissions', { token }),
   create: (token: string, data: CreatePermissionDto) =>
     api<Permission>('/permissions', { method: 'POST', body: data, token }),
+  update: (token: string, id: string, data: UpdatePermissionDto) =>
+    api<Permission>(`/permissions/${id}`, { method: 'PUT', body: data, token }),
   delete: (token: string, id: string) =>
     api<void>(`/permissions/${id}`, { method: 'DELETE', token }),
 };
@@ -185,6 +191,13 @@ export interface CreateUserDto {
   role?: 'admin' | 'user' | 'guest';
 }
 
+export interface UpdateUserDto {
+  email?: string;
+  password?: string;
+  role?: 'admin' | 'user' | 'guest';
+  isActive?: boolean;
+}
+
 export interface CreateDeviceDto {
   deviceId: string;
   name: string;
@@ -196,4 +209,10 @@ export interface CreatePermissionDto {
   deviceId: string;
   fromTime?: string;
   toTime?: string;
+}
+
+export interface UpdatePermissionDto {
+  fromTime?: string;
+  toTime?: string;
+  isActive?: boolean;
 }
