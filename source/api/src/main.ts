@@ -1,6 +1,6 @@
 import './polyfills';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -17,6 +17,24 @@ async function bootstrap() {
     new ValidationPipe({
       whitelist: true,
       transform: true,
+      forbidNonWhitelisted: false,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+      exceptionFactory: (errors) => {
+        const messages = errors.map((error) => {
+          const constraints = error.constraints;
+          if (constraints) {
+            return Object.values(constraints).join(', ');
+          }
+          return `${error.property} tiene un valor inválido`;
+        });
+        return new BadRequestException({
+          message: messages.join('; '),
+          error: 'Validation failed',
+          statusCode: 400,
+        });
+      },
     }),
   );
 

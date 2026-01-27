@@ -18,7 +18,11 @@ export class UsersService {
     });
 
     if (existing) {
-      throw new ConflictException('Email already exists');
+      throw new ConflictException({
+        message: 'Este email ya está registrado',
+        error: 'Email already exists',
+        statusCode: 409,
+      });
     }
 
     const passwordHash = await bcrypt.hash(createUserDto.password, 10);
