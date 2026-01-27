@@ -33,10 +33,27 @@ export async function api<T>(endpoint: string, options: RequestOptions = {}): Pr
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ 
-        message: `Error ${response.status}: ${response.statusText}` 
-      }));
-      throw new Error(error.message || `Error en la petición (${response.status})`);
+      let errorMessage = `Error ${response.status}: ${response.statusText}`;
+      
+      try {
+        const error = await response.json();
+        errorMessage = error.message || error.error || errorMessage;
+        
+        // Mensajes más amigables para errores comunes
+        if (response.status === 409) {
+          errorMessage = 'Este email ya está registrado. Usa otro email.';
+        } else if (response.status === 400) {
+          errorMessage = error.message || 'Datos inválidos. Verifica el email y que la contraseña tenga al menos 6 caracteres.';
+        } else if (response.status === 403) {
+          errorMessage = 'No tienes permisos para realizar esta acción.';
+        } else if (response.status === 401) {
+          errorMessage = 'Sesión expirada. Por favor, inicia sesión nuevamente.';
+        }
+      } catch {
+        // Si no se puede parsear el JSON, usar el mensaje por defecto
+      }
+      
+      throw new Error(errorMessage);
     }
 
     return response.json();

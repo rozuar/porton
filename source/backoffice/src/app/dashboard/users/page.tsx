@@ -41,7 +41,11 @@ export default function UsersPage() {
       setFormData({ email: '', password: '', role: 'user' });
       fetchUsers();
     } catch (error) {
-      alert('Error al crear usuario');
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Error al crear usuario. Verifica que el email no esté duplicado y la contraseña tenga al menos 6 caracteres.';
+      alert(errorMessage);
+      console.error('Error creating user:', error);
     }
   };
 
