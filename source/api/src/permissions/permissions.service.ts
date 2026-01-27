@@ -75,9 +75,15 @@ export class PermissionsService {
     }
 
     await this.permissionsRepository.update(id, updatePermissionDto);
-    return this.permissionsRepository.findOne({
+    const updated = await this.permissionsRepository.findOne({
       where: { id },
       relations: ['user', 'device'],
     });
+
+    if (!updated) {
+      throw new NotFoundException('Permiso no encontrado después de actualizar');
+    }
+
+    return updated;
   }
 }

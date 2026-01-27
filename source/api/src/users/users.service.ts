@@ -83,7 +83,11 @@ export class UsersService {
     }
 
     await this.usersRepository.update(id, updateData);
-    return this.findOne(id);
+    const updated = await this.findOne(id);
+    if (!updated) {
+      throw new NotFoundException('Usuario no encontrado después de actualizar');
+    }
+    return updated;
   }
 
   async toggleActive(id: string): Promise<User> {
@@ -93,6 +97,10 @@ export class UsersService {
     }
 
     await this.usersRepository.update(id, { isActive: !user.isActive });
-    return this.findOne(id);
+    const updated = await this.findOne(id);
+    if (!updated) {
+      throw new NotFoundException('Usuario no encontrado después de actualizar');
+    }
+    return updated;
   }
 }
