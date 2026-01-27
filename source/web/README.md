@@ -1,77 +1,83 @@
-# Control Portón - HTML Standalone
+# Portón Web - Frontend Next.js
 
-Interfaz web simple y standalone para abrir el portón. Similar a la app Android pero en formato web.
+Frontend web completo en Next.js con TypeScript que replica la funcionalidad de la app Android.
 
 ## Tecnología
 
-- HTML5 + CSS3 + JavaScript vanilla
-- Sin dependencias externas
-- Todo en un solo archivo HTML
+- Next.js 14 (App Router)
+- React + TypeScript
+- Zustand (estado global)
+- Tailwind CSS
 
 ## Características
 
 - ✅ Login con email y contraseña
-- ✅ Control de portón con Device ID configurable
+- ✅ Botones de acceso rápido (Admin, Usuario, Invitado)
+- ✅ Dashboard con botón para abrir portón
+- ✅ Campo para Device ID configurable
 - ✅ Persistencia de sesión (localStorage)
+- ✅ Manejo de estados (cargando, éxito, error)
+- ✅ Bloqueo temporal después de abrir (10 segundos)
 - ✅ UI moderna y responsive
-- ✅ Sin dependencias externas (todo en un solo archivo HTML)
 
 ## Desarrollo Local
 
-### Opción 1: Servidor HTTP simple
-
 ```bash
 cd source/web
-python3 -m http.server 8080
-# Accede a: http://localhost:8080/porton.html
+npm install
+npm run dev
 ```
 
-### Opción 2: Con serve
+Abre [http://localhost:3000](http://localhost:3000)
 
-```bash
-cd source/web
-npx serve -s . -l 3000
-# Accede a: http://localhost:3000/porton.html
+## Variables de Entorno
+
+```env
+NEXT_PUBLIC_API_URL=https://porton-api-production.up.railway.app
 ```
-
-### Opción 3: Abrir directamente
-
-Abre `source/web/porton.html` en el navegador (puede haber problemas de CORS).
 
 ## Deploy en Railway
 
 1. Crea un servicio en Railway apuntando a `source/web`
-2. Railway usará `serve` para servir los archivos estáticos
-3. No se requieren variables de entorno
+2. Configura la variable `NEXT_PUBLIC_API_URL`
+3. Railway detectará automáticamente Next.js y lo construirá
 
 ## Estructura
 
 ```
 source/web/
-├── porton.html              # Control Portón (HTML standalone)
-├── access.html              # Control directo NodeMCU (legacy)
-├── README.md                # Este archivo
-├── README-PORTON.html.md    # Documentación detallada del HTML
-├── package.json             # Solo para serve en Railway
-└── railway.toml            # Configuración Railway
+├── src/
+│   ├── app/
+│   │   ├── layout.tsx        # Layout principal
+│   │   ├── page.tsx          # Página principal (ruteo)
+│   │   └── globals.css       # Estilos globales
+│   ├── components/
+│   │   ├── LoginScreen.tsx   # Pantalla de login
+│   │   └── DashboardScreen.tsx # Pantalla de dashboard
+│   ├── lib/
+│   │   └── api.ts            # Cliente API
+│   └── stores/
+│       └── auth.ts            # Store de autenticación (Zustand)
+├── package.json
+├── next.config.js
+├── tailwind.config.ts
+└── railway.toml
 ```
 
-## Configuración de API
+## Funcionalidades
 
-El HTML detecta automáticamente la URL de la API:
-- **Desarrollo**: `http://localhost:3000` (si estás en localhost)
-- **Producción**: `https://porton-api-production.up.railway.app`
+### Login
+- Validación de email y contraseña
+- Botones de acceso rápido para pruebas
+- Manejo de errores de autenticación
+- Persistencia de sesión
 
-Para personalizar, agrega un meta tag en el HTML:
-```html
-<meta name="api-url" content="https://tu-api.com" />
-```
-
-## Acceso
-
-- **URL**: `/porton.html`
-- **Requisitos**: Usuario con permisos para el dispositivo
-- **Credenciales**: Cualquier usuario del sistema
+### Dashboard
+- Campo para Device ID (por defecto: `porton-001`)
+- Botón para abrir el portón
+- Indicadores de estado (cargando, éxito, error)
+- Bloqueo temporal después de abrir (10 segundos)
+- Logout que limpia la sesión
 
 ## Credenciales de Prueba
 
@@ -81,4 +87,5 @@ Para personalizar, agrega un meta tag en el HTML:
 
 ## Más Información
 
-Ver [README-PORTON.html.md](./README-PORTON.html.md) para documentación detallada.
+- [Arquitectura del Proyecto](../ARQUITECTURA.md)
+- [Configuración Railway](./railway.toml)
