@@ -37,20 +37,37 @@ export async function api<T>(endpoint: string, options: RequestOptions = {}): Pr
       
       try {
         const error = await response.json();
-        errorMessage = error.message || error.error || errorMessage;
+        
+        // NestJS devuelve errores en formato { message, error, statusCode }
+        // o puede ser un string simple
+        if (typeof error === 'string') {
+          errorMessage = error;
+        } else if (Array.isArray(error.message)) {
+          // Errores de validación vienen como array
+          errorMessage = error.message.join('; ');
+        } else if (error.message) {
+          errorMessage = error.message;
+        } else if (error.error) {
+          errorMessage = error.error;
+        }
         
         // Mensajes más amigables para errores comunes
         if (response.status === 409) {
-          errorMessage = 'Este email ya está registrado. Usa otro email.';
+          errorMessage = errorMessage.includes('email') || errorMessage.includes('Email')
+            ? errorMessage
+            : 'Este email ya está registrado. Usa otro email.';
         } else if (response.status === 400) {
-          errorMessage = error.message || 'Datos inválidos. Verifica el email y que la contraseña tenga al menos 6 caracteres.';
+          if (!errorMessage.includes('email') && !errorMessage.includes('password')) {
+            errorMessage = errorMessage || 'Datos inválidos. Verifica el email y que la contraseña tenga al menos 6 caracteres.';
+          }
         } else if (response.status === 403) {
           errorMessage = 'No tienes permisos para realizar esta acción.';
         } else if (response.status === 401) {
           errorMessage = 'Sesión expirada. Por favor, inicia sesión nuevamente.';
         }
-      } catch {
+      } catch (parseError) {
         // Si no se puede parsear el JSON, usar el mensaje por defecto
+        console.error('Error parsing error response:', parseError);
       }
       
       throw new Error(errorMessage);
