@@ -1,36 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Control Portón - HTML Standalone
 
-## Getting Started
+Interfaz web simple y standalone para abrir el portón. Similar a la app Android pero en formato web.
 
-First, run the development server:
+## Tecnología
+
+- HTML5 + CSS3 + JavaScript vanilla
+- Sin dependencias externas
+- Todo en un solo archivo HTML
+
+## Características
+
+- ✅ Login con email y contraseña
+- ✅ Control de portón con Device ID configurable
+- ✅ Persistencia de sesión (localStorage)
+- ✅ UI moderna y responsive
+- ✅ Sin dependencias externas (todo en un solo archivo HTML)
+
+## Desarrollo Local
+
+### Opción 1: Servidor HTTP simple
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cd source/web
+python3 -m http.server 8080
+# Accede a: http://localhost:8080/porton.html
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Opción 2: Con serve
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cd source/web
+npx serve -s . -l 3000
+# Accede a: http://localhost:3000/porton.html
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Opción 3: Abrir directamente
 
-## Learn More
+Abre `source/web/porton.html` en el navegador (puede haber problemas de CORS).
 
-To learn more about Next.js, take a look at the following resources:
+## Deploy en Railway
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Crea un servicio en Railway apuntando a `source/web`
+2. Railway usará `serve` para servir los archivos estáticos
+3. No se requieren variables de entorno
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Estructura
 
-## Deploy on Vercel
+```
+source/web/
+├── porton.html              # Control Portón (HTML standalone)
+├── access.html              # Control directo NodeMCU (legacy)
+├── README.md                # Este archivo
+├── README-PORTON.html.md    # Documentación detallada del HTML
+├── package.json             # Solo para serve en Railway
+└── railway.toml            # Configuración Railway
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Configuración de API
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+El HTML detecta automáticamente la URL de la API:
+- **Desarrollo**: `http://localhost:3000` (si estás en localhost)
+- **Producción**: `https://porton-api-production.up.railway.app`
+
+Para personalizar, agrega un meta tag en el HTML:
+```html
+<meta name="api-url" content="https://tu-api.com" />
+```
+
+## Acceso
+
+- **URL**: `/porton.html`
+- **Requisitos**: Usuario con permisos para el dispositivo
+- **Credenciales**: Cualquier usuario del sistema
+
+## Credenciales de Prueba
+
+- Admin: `admin@porton.com` / `CHANGE_ME_PASSWORD`
+- Usuario: `user@porton.com` / `user123`
+- Invitado: `guest@porton.com` / `guest123`
+
+## Más Información
+
+Ver [README-PORTON.html.md](./README-PORTON.html.md) para documentación detallada.

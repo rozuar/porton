@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -64,6 +65,7 @@ fun PortonApp(viewModel: MainViewModel = viewModel()) {
       onEmailChange = viewModel::updateEmail,
       onPasswordChange = viewModel::updatePassword,
       onSubmit = viewModel::login,
+      onQuickLogin = viewModel::loginWith,
     )
   } else {
     DashboardScreen(
@@ -89,7 +91,14 @@ fun LoginScreen(
   onEmailChange: (String) -> Unit,
   onPasswordChange: (String) -> Unit,
   onSubmit: () -> Unit,
+  onQuickLogin: (String, String) -> Unit,
 ) {
+  val quickProfiles = listOf(
+    "Admin" to "admin@porton.com",
+    "Usuario" to "user@porton.com",
+    "Invitado" to "guest@porton.com",
+  )
+  val quickPassword = "CHANGE_ME_PASSWORD"
   Column(
     modifier = Modifier
       .fillMaxSize()
@@ -98,6 +107,21 @@ fun LoginScreen(
     horizontalAlignment = Alignment.CenterHorizontally,
   ) {
     Text(text = "Porton", style = MaterialTheme.typography.headlineMedium)
+    if (BuildConfig.DEBUG) {
+      Spacer(modifier = Modifier.height(12.dp))
+      Text(text = "Accesos de prueba", style = MaterialTheme.typography.labelMedium)
+      Spacer(modifier = Modifier.height(8.dp))
+      Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        quickProfiles.forEach { (label, profileEmail) ->
+          Button(
+            onClick = { onQuickLogin(profileEmail, quickPassword) },
+            enabled = !isLoading,
+          ) {
+            Text(label)
+          }
+        }
+      }
+    }
     Spacer(modifier = Modifier.height(24.dp))
     OutlinedTextField(
       value = email,
@@ -236,6 +260,12 @@ class MainViewModel : ViewModel() {
     }
   }
 
+  fun loginWith(email: String, password: String) {
+    if (uiState.isLoading) return
+    uiState = uiState.copy(email = email, password = password, error = null)
+    login()
+  }
+
   fun logout() {
     gateJob?.cancel()
     uiState = UiState()
@@ -287,8 +317,9 @@ class ApiClient {
       client.newCall(request).execute().use { response ->
         val responseBody = response.body?.string().orEmpty()
         if (!response.isSuccessful) {
+          val message = parseApiError(response.code, responseBody)
           return@withContext Result.failure(
-            Exception("Login fallido (${response.code}) ${responseBody.ifBlank { "sin detalle" }}"),
+            Exception(message),
           )
         }
         val payload = JSONObject(if (responseBody.isBlank()) "{}" else responseBody)
@@ -320,6 +351,23 @@ class ApiClient {
         }
         Result.success(Unit)
       }
+    }
+  }
+
+  private fun parseApiError(status: Int, body: String): String {
+    val jsonMessage = runCatching {
+      val payload = JSONObject(body)
+      payload.optString("message", "")
+    }.getOrDefault("")
+    if (jsonMessage.isNotBlank()) {
+      return "Login fallido: $jsonMessage"
+    }
+    return when (status) {
+      400 -> "Datos invalidos. Verifica email y contrasena."
+      401, 403 -> "Credenciales incorrectas o sin acceso."
+      404 -> "Servidor no disponible."
+      in 500..599 -> "Error del servidor. Intenta mas tarde."
+      else -> "Login fallido ($status)"
     }
   }
 }

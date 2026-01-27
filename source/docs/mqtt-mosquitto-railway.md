@@ -2,7 +2,7 @@
 
 ## Deploy
 1. En Railway: **New Service → Deploy Docker Image**
-2. Selecciona este repo y apunta a `source/infra/mosquitto`.
+2. Selecciona este repo y apunta a `source/mqtt`.
 3. Railway construira la imagen con el `Dockerfile`.
 4. Habilita **TCP Proxy** para el puerto `1883`.
 

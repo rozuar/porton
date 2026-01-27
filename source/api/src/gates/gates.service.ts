@@ -22,17 +22,20 @@ export class GatesService {
       throw new NotFoundException('Device not found');
     }
 
-    const hasAccess = await this.permissionsService.checkAccess(userId, device.id);
+    const access = await this.permissionsService.checkAccess(userId, device.id);
 
-    if (!hasAccess) {
+    if (!access.allowed) {
+      const reasonMessage = access.reason === 'outside_schedule'
+        ? `Outside allowed time (${access.fromTime}-${access.toTime})`
+        : 'Permission denied';
       await this.logsService.create(
         userId,
         device.id,
         'OPEN',
         LogResult.DENIED,
-        'Permission denied or outside allowed time',
+        reasonMessage,
       );
-      throw new ForbiddenException('Access denied');
+      throw new ForbiddenException(reasonMessage);
     }
 
     const requestId = randomUUID();

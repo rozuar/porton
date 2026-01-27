@@ -2,16 +2,15 @@
 #include <PubSubClient.h>
 
 // ===== Configuracion =====
-const char* WIFI_SSID = "HUAWEI-54aD";
-const char* WIFI_PASSWORD = "164242242";
+const char* WIFI_SSID = "";
+const char* WIFI_PASSWORD = "";
 
-const char* MQTT_HOST = "shortline.proxy.rlwy.net";
+const char* MQTT_HOST = "";
 const int MQTT_PORT = 16444;
-const char* MQTT_USER = "admin";
-const char* MQTT_PASS = "w2px0l4cjxaezuhtis";
+const char* MQTT_USER = "";
+const char* MQTT_PASS = "";
 
 const char* DEVICE_ID = "porton-001";
-
 
 // Relay
 const int RELAY_PIN = D1; // GPIO5
