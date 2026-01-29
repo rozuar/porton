@@ -38,6 +38,20 @@ void logValue(const char* label, const char* value) {
   Serial.println(value);
 }
 
+// Comprueba si hay salida a internet (TCP a DNS de Google).
+// WiFi puede estar conectado pero el router sin internet.
+bool checkInternet() {
+  WiFiClient testClient;
+  const char* host = "8.8.8.8";
+  const uint16_t port = 53;
+  if (!testClient.connect(host, port, 3000)) {
+    testClient.stop();
+    return false;
+  }
+  testClient.stop();
+  return true;
+}
+
 void connectWifi() {
   logLine("WiFi: start");
   WiFi.mode(WIFI_STA);
@@ -140,8 +154,17 @@ void setup() {
   logValue("Status topic: ", statusTopic.c_str());
 
   connectWifi();
+  if (checkInternet()) {
+    logLine("Internet: OK");
+  } else {
+    logLine("Internet: FAIL (WiFi OK, sin salida a internet)");
+  }
   connectMqtt();
 }
+
+// Ultima vez que se comprobo internet (cada ~60s)
+unsigned long lastInternetCheck = 0;
+const unsigned long INTERNET_CHECK_INTERVAL_MS = 60000;
 
 void loop() {
   if (WiFi.status() != WL_CONNECTED) {
@@ -155,4 +178,14 @@ void loop() {
   }
 
   mqttClient.loop();
+
+  // Comprobar internet periodicamente y loguear
+  if (millis() - lastInternetCheck >= INTERNET_CHECK_INTERVAL_MS) {
+    lastInternetCheck = millis();
+    if (checkInternet()) {
+      logLine("Internet: OK");
+    } else {
+      logLine("Internet: FAIL");
+    }
+  }
 }
